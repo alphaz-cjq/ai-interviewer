@@ -98,11 +98,14 @@ public class JobPositionServiceImpl implements JobPositionService {
         jobPositionMapper.updateById(existing);
 
         // ========== 延迟双删：写 DB 后删缓存 ==========
-        stringRedisTemplate.delete(RedisKeyConstants.JOB_LIST_CACHE_KEY);
+        //需要删两个缓存
+        stringRedisTemplate.delete("cache:job:position:" + id);//单条岗位缓存
+        stringRedisTemplate.delete(RedisKeyConstants.JOB_LIST_CACHE_KEY);//列表岗位缓存
         // 注册事务提交后的回调：提交后再删一次（真正的"延迟双删"，不阻塞线程/连接）
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
+                stringRedisTemplate.delete("cache:job:position:" + id);
                 stringRedisTemplate.delete(RedisKeyConstants.JOB_LIST_CACHE_KEY);
             }
         });
@@ -193,11 +196,33 @@ public class JobPositionServiceImpl implements JobPositionService {
     * */
     @Override
     public JobPosition getById(Long id) {
-        JobPosition job = jobPositionMapper.selectById(id);
-        if (job == null) {
-            throw new BusinessException("岗位不存在");
+        //1.单条岗位
+        String key = "cache:job:position:" + id;
+       try {
+           //2.根据key获取缓存
+           String job = stringRedisTemplate.opsForValue().get(key);
+           if (job != null){
+               return objectMapper.readValue(job, JobPosition.class);
+           }
+       }catch (Exception e){
+           log.warn("读取岗位缓存失败，降级为查库", e);
+       }
+       //3.缓存未命中，查询DB
+        JobPosition jobPosition = jobPositionMapper.selectById(id);
+       if (jobPosition==null){
+           throw new BusinessException("岗位不存在");
+       }
+       //4.写入缓存
+        try {
+            stringRedisTemplate.opsForValue()
+                    .set(key, objectMapper.writeValueAsString(jobPosition),
+                            1800 + new Random().nextInt(300),
+                            TimeUnit.SECONDS// 过期时间,防止雪崩
+                    );
+        } catch (Exception e) {
+            log.error("岗位详情缓存回填失败", e);
         }
-        return job;
+        return jobPosition;
     }
 
     /*
