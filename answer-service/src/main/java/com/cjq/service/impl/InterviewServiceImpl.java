@@ -118,58 +118,20 @@ public class InterviewServiceImpl implements InterviewService {
     // ⚠️ 不使用 @Transactional：DB 写入在异步 onComplete 回调中执行，不在本方法的事务范围内
     @Override
     public SseEmitter startInterviewStream(Long userId, InterviewStartRequest request) {
-        // 1. 获取简历和 JD 信息
-        Resume resume = resumeMapper.selectById(request.getResumeId());
-        if (resume == null) {
-            throw new BusinessException("简历不存在");
-        }
-        JobPosition job = jobPositionMapper.selectById(request.getJobId());
-        if (job == null) {
-            throw new BusinessException("岗位不存在");
-        }
+      //1.复用非流式：查简历/JD、建面试、生成题目、存题、建会话
+        Map<String,Object>result=startInterview(userId,request);
 
-        // 2. 创建面试记录
-        Interview interview = new Interview();
-        interview.setUserId(userId);
-        interview.setJobId(request.getJobId());
-        interview.setResumeId(request.getResumeId());
-        interview.setStatus(InterviewStatus.IN_PROGRESS.name());
-        interview.setStartTime(LocalDateTime.now());
-        interviewMapper.insert(interview);
-
-        // 3. 调用非流式 AI 生成第一题（只生成一次！）
-        String firstQuestion = aiEngine.generateQuestion(interview.getId(), job, resume, 1);
-
-        // 4. 保存第一题到 DB
-        InterviewQuestion question = new InterviewQuestion();
-        question.setInterviewId(interview.getId());
-        question.setQuestionText(firstQuestion);
-        question.setQuestionNum(1);
-        question.setQuestionType("TECHNICAL");
-        questionMapper.insert(question);
-
-        // 5. 创建 Redis 会话
-        Map<String, Object> sessionData = new HashMap<>();
-        sessionData.put(InterviewSessionKeys.CURRENT_QUESTION_NUM, 1);
-        sessionData.put(InterviewSessionKeys.TOTAL_QUESTIONS, TOTAL_QUESTIONS);
-        sessionData.put(InterviewSessionKeys.JOB_ID, request.getJobId());
-        sessionData.put(InterviewSessionKeys.RESUME_ID, request.getResumeId());
-        sessionData.put(InterviewSessionKeys.SCORE_ACCUMULATED, 0);
-        sessionData.put(InterviewSessionKeys.STATUS, InterviewStatus.IN_PROGRESS.name());
-        sessionData.put(InterviewSessionKeys.FOLLOW_UP_COUNT, 0);
-        sessionManager.createSession(interview.getId(), sessionData);
-
-        //  ✅ 准备 done 事件数据（一定要把 interviewId 和 questionId 传回去！）
+        //  2.准备 done 事件数据（一定要把 interviewId 和 questionId 传回去！）
         //保证流式推送
         Map<String, Object> doneMeta = new HashMap<>();
-        doneMeta.put("interviewId", interview.getId());
-        doneMeta.put("questionId", question.getId());
+        doneMeta.put("interviewId", result.get("interviewId"));
+        doneMeta.put("questionId", result.get("questionId"));
         doneMeta.put("questionNum", 1);
         doneMeta.put("totalQuestions", TOTAL_QUESTIONS);
-        log.info("流式开始面试（复用非流式题目）：interviewId={}, questionId={}", interview.getId(), question.getId());
+        log.info("流式开始面试（复用非流式题目）：interviewId={}, questionId={}", result.get("interviewId"), result.get("questionId"));
 
-        // 6. 把已入库的题目文本逐字流式推给前端
-        return aiEngine.streamText((firstQuestion), doneMeta);
+        // 3.把已入库的题目文本逐字流式推给前端
+        return aiEngine.streamText((String) result.get("question"), doneMeta);
     }
 
     /*
@@ -352,7 +314,7 @@ public class InterviewServiceImpl implements InterviewService {
                         new MessagePostProcessor() {
                             @Override
                             public Message postProcessMessage(Message message) throws AmqpException {
-                                message.getMessageProperties().setContentType("application/json");
+                                message.getMessageProperties().setContentType("application/json");// 设置message类型为 JSON
                                 return message;
                             }
                         }
