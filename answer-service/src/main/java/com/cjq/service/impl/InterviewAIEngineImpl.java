@@ -1,5 +1,6 @@
 package com.cjq.service.impl;
 
+import com.cjq.Exceptions.BusinessException;
 import com.cjq.pojo.DTO.ScoreResult;
 import com.cjq.pojo.PO.JobPosition;
 import com.cjq.pojo.PO.Resume;
@@ -63,13 +64,16 @@ public class InterviewAIEngineImpl implements InterviewAIEngine {
         String prompt = buildQuestionPrompt(questionNum, resumeContext, jdContext);
 
         //4.调用大模型生成面试题
-        String question = chatClient.prompt()
+        String context = chatClient.prompt()
                 .user(prompt)//设置用户信息
                 .call()//执行调用
-                .content() // 获取生成的面试题
-                .trim();
+                .content(); // 获取生成的面试题
+        if (context == null || context.trim().isEmpty()){
+            throw new BusinessException("AI返回内容为空");
+        }
+        String question = context.trim();
 
-        log.info("生成的第{}道面试题：{}", questionNum,question);
+        log.info("生成的第{}道面试题：{}", questionNum, question);
         return question;
 
     }
@@ -185,12 +189,15 @@ public class InterviewAIEngineImpl implements InterviewAIEngine {
         //1.构建追问Prompt
         String prompt = buildFollowUpPrompt(question, answer);
         //2.调用大模型生成追问
-        String followUp = chatClient.prompt()
+        String content = chatClient.prompt()
                 .user(prompt)
                 .call()
-                .content()
-                .trim();
-
+                .content();
+        //3.检查内容是否为空
+        if (content==null||content.trim().isEmpty()){
+            throw new BusinessException("AI返回内容为空");
+        }
+        String followUp = content.trim();
         log.info("生成追问：{}", followUp);
         return followUp;
     }
