@@ -20,16 +20,6 @@ public class ScoreResult {
     /** 是否需要追问 */
     private boolean shouldFollowUp;
 
-    /*
-    * 1.因为你在类上加了 @Data 注解。Lombok 的 @Data 相当于一口气包含了 @Getter、@Setter、@ToString 等注解。
-*2.编译前（你看到的 .java 文件）：只有 private boolean shouldFollowUp; 这一行字段定义。
-*3.编译后（JVM 运行的 .class 字节码）：Lombok 的注解处理器会在编译期介入，
-* 自动生成 isShouldFollowUp() 和 setShouldFollowUp(boolean) 方法，并塞进 .class 文件里。
-*4.所以，你的 IDE（如 IDEA）之所以能识别 scoreResult.isShouldFollowUp() 不报红，是因为 IDE
-* 自带的 Lombok 插件解析了注解，在编辑器层面“模拟”出了这个方法的存在，
-* 但实际上，.java 文本里确实没有这行代码。
-    * */
-
     /** 追问原因（shouldFollowUp=true 时有值） */
     private String followUpReason;
 
