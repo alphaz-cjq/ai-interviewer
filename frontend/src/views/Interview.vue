@@ -90,7 +90,7 @@
             <div class="avatar ai-avatar">🤖</div>
             <div class="bubble-wrapper">
               <div class="bubble ai-bubble">
-                <span class="bubble-text">{{ getDisplayText(msg) }}</span>
+                <div class="bubble-md" v-html="renderMarkdown(getDisplayText(msg))"></div>
                 <span v-if="msg.isStreaming" class="typing-cursor">|</span>
               </div>
               <div v-if="msg.questionNum" class="bubble-label">
@@ -145,9 +145,18 @@
                 <span class="dim-value">{{ value }}/10</span>
               </div>
             </div>
-            <div class="report-item"><strong>✅ 优势：</strong>{{ reportData.strengths }}</div>
-            <div class="report-item"><strong>⚠️ 不足：</strong>{{ reportData.weaknesses }}</div>
-            <div class="report-item"><strong>💡 改进建议：</strong>{{ reportData.suggestion }}</div>
+            <div class="report-item">
+              <strong class="report-label">✅ 优势</strong>
+              <div class="report-md" v-html="renderMarkdown(reportData.strengths)"></div>
+            </div>
+            <div class="report-item">
+              <strong class="report-label">⚠️ 不足</strong>
+              <div class="report-md" v-html="renderMarkdown(reportData.weaknesses)"></div>
+            </div>
+            <div class="report-item">
+              <strong class="report-label">💡 改进建议</strong>
+              <div class="report-md" v-html="renderMarkdown(reportData.suggestion)"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -181,6 +190,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, nextTick, onActivated } from 'vue'
 import apiClient from '@/utils/request'
+import { renderMarkdown } from '@/utils/markdown'
 
 defineOptions({ name: 'Interview' })
 
@@ -951,12 +961,13 @@ const fetchReport = async (retryCount = 0) => {
 }
 .ai-avatar { background: var(--bg-start); }
 .user-avatar { background: var(--bg-mid); }
-.bubble-wrapper { max-width: 70%; display: flex; flex-direction: column; gap: 4px; }
+.bubble-wrapper { max-width: 86%; display: flex; flex-direction: column; gap: 4px; }
 .bubble { padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.7; word-break: break-word; }
 .ai-bubble {
   background: #fff; color: var(--text);
   border-top-left-radius: 4px; box-shadow: var(--shadow-sm);
 }
+.ai-bubble .typing-cursor { margin-top: 4px; }
 .bubble-label { font-size: 12px; color: var(--text-lighter); padding-left: 4px; }
 
 /* ===== 用户消息行 ===== */
@@ -1029,7 +1040,68 @@ const fetchReport = async (retryCount = 0) => {
 }
 .dim-value { width: 40px; color: var(--text); font-weight: 600; text-align: right; }
 .report-item {
-  font-size: 13px; color: var(--text-light); margin-bottom: 6px; line-height: 1.6;
+  font-size: 13px; color: var(--text-light); margin-bottom: 10px; line-height: 1.6;
+}
+.report-label { display: block; margin-bottom: 4px; color: var(--text); font-weight: 600; }
+/* Markdown 渲染后的内容样式 */
+.report-md :deep(p) { margin: 0 0 6px; }
+.report-md :deep(p:last-child) { margin-bottom: 0; }
+.report-md :deep(ul),
+.report-md :deep(ol) { margin: 0 0 6px; padding-left: 20px; }
+.report-md :deep(li) { margin: 3px 0; }
+.report-md :deep(strong) { color: var(--text); }
+.report-md :deep(code) { background: #eef0f3; padding: 1px 5px; border-radius: 3px; }
+
+/* 气泡文本：用户回答保留换行；AI 题目用 Markdown 渲染 */
+.bubble-text { white-space: pre-wrap; word-break: break-word; }
+.bubble-md { word-break: break-word; }
+.bubble-md :deep(p) { margin: 0 0 8px; }
+.bubble-md :deep(p:last-child) { margin-bottom: 0; }
+.bubble-md :deep(h1),
+.bubble-md :deep(h2),
+.bubble-md :deep(h3),
+.bubble-md :deep(h4) {
+  margin: 10px 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--text);
+}
+.bubble-md :deep(h1:first-child),
+.bubble-md :deep(h2:first-child),
+.bubble-md :deep(h3:first-child) { margin-top: 0; }
+.bubble-md :deep(ul),
+.bubble-md :deep(ol) { margin: 6px 0 10px; padding-left: 1.4em; }
+.bubble-md :deep(li) { margin: 4px 0; }
+.bubble-md :deep(strong) { font-weight: 700; color: var(--text); }
+.bubble-md :deep(code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background: #F0EDF5;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.bubble-md :deep(pre) {
+  margin: 8px 0 12px;
+  padding: 12px 14px;
+  background: #F6F3F9;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.bubble-md :deep(pre code) {
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  white-space: pre;
+}
+.bubble-md :deep(blockquote) {
+  margin: 8px 0;
+  padding: 4px 12px;
+  border-left: 3px solid var(--primary);
+  color: var(--text-light);
 }
 
 /* ===== 输入行 ===== */

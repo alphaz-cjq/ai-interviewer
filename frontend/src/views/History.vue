@@ -70,15 +70,15 @@
             </div>
             <div v-if="reportData.strengths" class="report-section">
               <h4>✅ 优势</h4>
-              <p class="report-text">{{ reportData.strengths }}</p>
+              <div class="report-text" v-html="renderMarkdown(reportData.strengths)"></div>
             </div>
             <div v-if="reportData.weaknesses" class="report-section">
               <h4>⚠️ 不足</h4>
-              <p class="report-text">{{ reportData.weaknesses }}</p>
+              <div class="report-text" v-html="renderMarkdown(reportData.weaknesses)"></div>
             </div>
             <div v-if="reportData.suggestion" class="report-section">
               <h4>💡 改进建议</h4>
-              <p class="report-text">{{ reportData.suggestion }}</p>
+              <div class="report-text" v-html="renderMarkdown(reportData.suggestion)"></div>
             </div>
           </div>
         </div>
@@ -90,6 +90,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import apiClient from '@/utils/request'
+import { renderMarkdown } from '@/utils/markdown'
 
 interface HistoryItem {
   id: number
@@ -277,6 +278,14 @@ async function fetchReport(interviewId: number, retryCount: number) {
   background: #FAF7FC; padding: 12px 16px; border-radius: var(--radius-sm);
   border-left: 3px solid var(--primary);
 }
+/* Markdown 渲染后的内容样式 */
+.report-text :deep(p) { margin: 0 0 8px; }
+.report-text :deep(p:last-child) { margin-bottom: 0; }
+.report-text :deep(ul),
+.report-text :deep(ol) { margin: 0 0 8px; padding-left: 20px; }
+.report-text :deep(li) { margin: 4px 0; }
+.report-text :deep(strong) { color: var(--text); font-weight: 600; }
+.report-text :deep(code) { background: #eef0f3; padding: 2px 5px; border-radius: 3px; font-size: 13px; }
 .report-dimensions { display: flex; flex-direction: column; gap: 10px; }
 .report-dim-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .dim-name { width: 90px; color: var(--text-light); flex-shrink: 0; }

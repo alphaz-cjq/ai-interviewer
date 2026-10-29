@@ -215,7 +215,12 @@ public class InterviewAIEngineImpl implements InterviewAIEngine {
                 2. 必须结合岗位要求中的关键技术
                 3. 题目要有实际场景，避免八股文
                 4. 不要重复之前已问过的知识点
-                5. 输出格式：直接输出题目内容，不需要额外说明
+                5. 使用 Markdown 排版，方便前端渲染：
+                   - 段落之间空一行，不要把整道题写成一段
+                   - JSON / 代码必须放在 fenced code block 中（如 ```json 或 ```javascript），代码完整合法，不要省略字段值
+                   - 列表每一项单独一行，使用 `- ` 或 `1. `
+                   - 函数名、字段名用行内 code（反引号）
+                6. 直接输出题目内容，不要输出“题目：”等前缀，不要额外说明
 
                 题目：
                 """.formatted(questionNum, resumeContext, jdContext);
