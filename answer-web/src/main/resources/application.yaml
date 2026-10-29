@@ -71,7 +71,7 @@ mybatis-plus:
 
 # ========== JWT ==========
 jwt:
-  secret: YourSecretKeyForJWT_ReplaceWithLongAndComplexString_AtLeast32Bytes
+  secret: ${JWT_SECRET}
   expiration: 604800000
 
 # ========== 日志 ==========
