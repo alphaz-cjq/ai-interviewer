@@ -10,9 +10,9 @@ import com.cjq.service.RAGService;
 import com.cjq.util.JsonUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -24,16 +24,27 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class InterviewAIEngineImpl implements InterviewAIEngine {
 
     private final ChatClient chatClient;
     private final RAGService ragService;
     private final ObjectMapper objectMapper;
+    private final Executor sseExecutor;
+    //构造函数，手写依赖注入
+    public InterviewAIEngineImpl(ChatClient chatClient,
+                                 RAGService ragService,
+                                 ObjectMapper objectMapper,
+                                 @Qualifier("sseExecutor") Executor sseExecutor) {
+        this.chatClient = chatClient;
+        this.ragService = ragService;
+        this.objectMapper = objectMapper;
+        this.sseExecutor = sseExecutor;
+    }
 
     // ==================== 非流式：生成题目 ====================
 //！！！注意：非流式方法不能删除
@@ -136,8 +147,8 @@ public class InterviewAIEngineImpl implements InterviewAIEngine {
                 SecurityContextHolder.clearContext();
                 log.info("🧹 已安全清除异步线程的 SecurityContext");
             }
-        });
-        log.info("🔥 streamText 返回 SseEmitter");  // ✅ 加这行
+        }, sseExecutor);
+        log.info("🔥 streamText 返回 SseEmitter");
         return emitter;
     }
 
